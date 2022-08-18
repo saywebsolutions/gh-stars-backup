@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -17,6 +19,19 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type GithubRepo struct {
+	Name, URL string
+	StarredAt *github.Timestamp
+}
+
+type ReposExport struct {
+	Items []GithubRepo
+}
+
+func (e *ReposExport) AddRepo(r GithubRepo) {
+	e.Items = append(e.Items, r)
+}
+
 func main() {
 
 	log.SetOutput(os.Stdout)
@@ -29,6 +44,7 @@ func main() {
 		pullArgs  = fs.String("pull-args", "", "arguments for git pull")
 		cloneArgs = fs.String("clone-args", "", "arguments for git clone")
 		outputDir = fs.String("output-dir", "./", "the directory where the repos will be saved")
+		listRepos = fs.Bool("list-repos", false, "return list of starred repos without downloading")
 	)
 
 	err := ff.Parse(fs, os.Args[1:],
@@ -38,6 +54,10 @@ func main() {
 	if err != nil && err.Error() == "error parsing commandline arguments: flag: help requested" {
 		os.Exit(0)
 	}
+
+	//	fmt.Printf("%T", listRepos)
+	//	fmt.Println(*listRepos)
+	//	return
 
 	if *ghPAT == "" {
 		log.Fatalln("must provide github PAT")
@@ -57,6 +77,8 @@ func main() {
 		}
 		*outputDir = strings.TrimRight(*outputDir, "/")
 	}
+
+	export := ReposExport{}
 
 	// connect to github
 	ctx := context.Background()
@@ -116,6 +138,19 @@ func main() {
 
 			ghRepo := r.GetRepository()
 
+			if *listRepos {
+				//				fmt.Println(ghRepo.GetFullName())
+				//				fmt.Println(ghRepo.GetCloneURL())
+				//				fmt.Println(r.StarredAt)
+				repo := GithubRepo{
+					Name:      ghRepo.GetFullName(),
+					URL:       ghRepo.GetCloneURL(),
+					StarredAt: r.StarredAt,
+				}
+				export.AddRepo(repo)
+				return
+			}
+
 			rfn := ghRepo.GetFullName()
 			cloneUrl := strings.Replace(ghRepo.GetCloneURL(), "https://", cloneWithTokenPrefix, 1)
 
@@ -147,6 +182,12 @@ func main() {
 
 		}(r)
 
+	}
+
+	if *listRepos {
+		//		fmt.Println(export.Items)
+		file, _ := json.MarshalIndent(export.Items, "", " ")
+		_ = ioutil.WriteFile("test.json", file, 0644)
 	}
 
 }
