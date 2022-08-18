@@ -55,10 +55,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	//	fmt.Printf("%T", listRepos)
-	//	fmt.Println(*listRepos)
-	//	return
-
 	if *ghPAT == "" {
 		log.Fatalln("must provide github PAT")
 	}
@@ -139,9 +135,6 @@ func main() {
 			ghRepo := r.GetRepository()
 
 			if *listRepos {
-				//				fmt.Println(ghRepo.GetFullName())
-				//				fmt.Println(ghRepo.GetCloneURL())
-				//				fmt.Println(r.StarredAt)
 				repo := GithubRepo{
 					Name:      ghRepo.GetFullName(),
 					URL:       ghRepo.GetCloneURL(),
@@ -185,9 +178,8 @@ func main() {
 	}
 
 	if *listRepos {
-		//		fmt.Println(export.Items)
 		file, _ := json.MarshalIndent(export.Items, "", " ")
-		_ = ioutil.WriteFile("test.json", file, 0644)
+		_ = ioutil.WriteFile("export.json", file, 0644)
 	}
 
 }
